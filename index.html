@@ -62,7 +62,7 @@
   --mesh-light: #f4eee7;
   --mesh-dark:  #150c0a;
   /* Font */
-  --font:-apple-system,'SF Pro Display','SF Pro Text','Inter','DM Sans',BlinkMacSystemFont,'helvetica neue',system-ui,sans-serif;
+  --font:Helvetica,'Helvetica Neue',Arial,sans-serif;
   --mono:'JetBrains Mono','SF Mono','Fira Mono',ui-monospace,'Courier New',monospace;
   --mono:'DM Mono','SFMono-Regular',Consolas,'Liberation Mono',monospace;
   --amber: var(--amb);
@@ -22850,7 +22850,7 @@ window.buildLineChart = function(datasets, labels, opts={}){
       grid += `<line x1="${padL}" x2="${wNum-padR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"
         stroke="rgba(11,15,26,0.07)" stroke-width="1"/>
       <text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="9.5"
-        fill="var(--ink4)" text-anchor="end" font-family="-apple-system,sans-serif">${nice}</text>`;
+        fill="var(--ink4)" text-anchor="end" font-family="Helvetica, 'Helvetica Neue', Arial, sans-serif">${nice}</text>`;
     }
   }
 
@@ -22859,7 +22859,7 @@ window.buildLineChart = function(datasets, labels, opts={}){
   let xLabels = labels.map((l,i)=>{
     if(i%step!==0 && i!==labels.length-1) return '';
     return `<text x="${toX(i).toFixed(1)}" y="${h-8}" font-size="9.5"
-      fill="var(--ink4)" text-anchor="middle" font-family="-apple-system,sans-serif">${l}</text>`;
+      fill="var(--ink4)" text-anchor="middle" font-family="Helvetica, 'Helvetica Neue', Arial, sans-serif">${l}</text>`;
   }).join('');
 
   // Dataset paths — cubic bezier smooth curves
@@ -22920,7 +22920,7 @@ window.buildLineChart = function(datasets, labels, opts={}){
           onmouseenter="this.style.opacity=.7" onmouseleave="this.style.opacity=1">
           <rect x="0" y="-4" width="18" height="3" rx="1.5" fill="${col}"/>
           <text x="22" y="0" font-size="10" fill="var(--ink3)"
-            font-family="-apple-system,sans-serif" font-weight="500">${ds.label}</text>
+            font-family="Helvetica, 'Helvetica Neue', Arial, sans-serif" font-weight="500">${ds.label}</text>
         </g>`;
       }).join('') + '</g>';
   }
@@ -23044,7 +23044,7 @@ window.buildBarChart = function(labels, values, opts={}){
     grid+=`<line x1="${padL}" x2="${w-padR}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"
       stroke="rgba(11,15,26,0.06)" stroke-width="1"/>
     <text x="${padL-8}" y="${(y+4).toFixed(1)}" font-size="9.5"
-      fill="var(--ink4)" text-anchor="end" font-family="-apple-system,sans-serif">${nice}</text>`;
+      fill="var(--ink4)" text-anchor="end" font-family="Helvetica, 'Helvetica Neue', Arial, sans-serif">${nice}</text>`;
   }
 
   // Bars
@@ -23062,7 +23062,7 @@ window.buildBarChart = function(labels, values, opts={}){
       onmouseleave="this.style.opacity='1';hideTooltip()"/>
     <text x="${(bx+barW/2).toFixed(1)}" y="${h-8}" font-size="9.5"
       fill="var(--ink4)" text-anchor="middle"
-      font-family="-apple-system,sans-serif">${label}</text>`;
+      font-family="Helvetica, 'Helvetica Neue', Arial, sans-serif">${label}</text>`;
   });
 
   const axis=`<line x1="${padL}" x2="${w-padR}" y1="${(padT+ch).toFixed(1)}" y2="${(padT+ch).toFixed(1)}"
@@ -23628,7 +23628,7 @@ window.downloadReceipt = function(ref, amount, customer, card, date){
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <title>BipraPay Receipt ${ref}</title>
 <style>
-  body{font-family:-apple-system,'Inter',sans-serif;max-width:380px;margin:40px auto;color:#1a1a2e;padding:20px}
+  body{font-family:Helvetica,'Helvetica Neue',Arial,sans-serif;max-width:380px;margin:40px auto;color:#1a1a2e;padding:20px}
   .logo{font-size:22px;font-weight:800;color:#F05A00;margin-bottom:4px}
   .logo span{color:#1a1a2e}
   .badge{background:#e6faf0;color:#F05A00;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
