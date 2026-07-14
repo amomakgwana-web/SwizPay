@@ -4161,27 +4161,6 @@ html.dark .hdr-ai-btn {
   </div>
   <div class="pad">
   <div style="font-family:var(--mono);font-size:11px;color:var(--ink4);text-align:right;margin-bottom:-4px" id="dashClock"></div>
-  <!-- Getting Started Banner -->
-  <div class="gs-banner" id="gsBanner">
-    <div>
-      <div style="font-size:15px;font-weight:700;color:white;margin-bottom:4px">Welcome to BipraPay</div>
-      <div style="font-size:12px;color:rgba(255,255,255,.8);margin-bottom:10px">Complete setup to go live. 3 of 5 steps done.</div>
-      <div style="display:flex;flex-wrap:wrap;gap:6px">
-        <span class="gs-step done" onclick="nav('banks')"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 10l5 5 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg> Connect Acquirer</span>
-        <span class="gs-step done" onclick="nav('sqs')"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 10l5 5 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg> Configure SQS/SNS</span>
-        <span class="gs-step done" onclick="nav('merchant')"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M4 10l5 5 7-7" stroke-linecap="round" stroke-linejoin="round"/></svg> Add First Merchant</span>
-        <span class="gs-step" onclick="nav('devportal')"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 3L7 11h6l-1 6 7-9h-6l1-5z" stroke-linecap="round" stroke-linejoin="round"/></svg> Generate API Keys</span>
-        <span class="gs-step" onclick="openModal('testPayModal')"><svg width="13" height="13" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 3L7 11h6l-1 6 7-9h-6l1-5z" stroke-linecap="round" stroke-linejoin="round"/></svg> Run Test Payment</span>
-      </div>
-    </div>
-    <div style="margin-left:auto;flex-shrink:0;text-align:center;z-index:1">
-      <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.2);border:3px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;margin:0 auto 6px">
-        <div style="font-size:14px;font-weight:700;color:white">60%</div>
-      </div>
-      <div style="font-size:11px;color:rgba(255,255,255,.7)">Complete</div>
-    </div>
-    <button class="gs-close" onclick="document.getElementById('gsBanner').style.display='none';localStorage.setItem('gs-dismissed','1')">×</button>
-  </div>
   <div class="g4 gap14">
     <div class="stat green"><div class="stat-lbl">Total Volume Today</div><div class="stat-val">R 847,320</div><div class="stat-meta"><span class="d-up">+12.4%</span> vs yesterday · 1,284 transactions</div></div>
     <div class="stat blue"><div class="stat-lbl">Success Rate</div><div class="stat-val">98.3%</div><div class="stat-meta">12 failed · <span class="d-up">+0.4%</span> improvement</div></div>
