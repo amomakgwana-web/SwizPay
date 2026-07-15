@@ -20945,11 +20945,6 @@ function runWebhookTest(){
 // ══════════════════════════════════════════════════════════════
 
 // ── 1. FIC REPORTING (extend riskTab) ─────────────────────────
-const FIC_REPORTS = [
-  {id:'STR-2026-0042',type:'STR',subject:'Thabo Khumalo',amount:'R 85,000',reason:'Structuring — 4 txns just under R 25K',date:'2026-05-04',status:'submitted',ficRef:'FIC-STR-2026-18421'},
-  {id:'STR-2026-0041',type:'STR',subject:'Unknown merchant',amount:'R 42,000',reason:'Rapid fund movement — no economic purpose',date:'2026-04-28',status:'acknowledged',ficRef:'FIC-STR-2026-18308'},
-  {id:'CTR-2026-0018',type:'CTR',subject:'Mohamed Amin',amount:'R 128,000',reason:'Cash transaction exceeding R 100,000 threshold',date:'2026-04-15',status:'submitted',ficRef:'FIC-CTR-2026-09142'},
-];
 
 // Extend riskTab AML with FIC reporting
 // Inject FIC/SARB/NCA tabs into risk tab row
@@ -20966,56 +20961,47 @@ setTimeout(()=>{
   }
 },400);
 
-function buildFICContent(el){
+async function buildFICContent(el){
   el.innerHTML=`
     <div class="g2 gap14">
       <div>
         <div class="card" style="margin-bottom:12px">
           <div class="card-hdr">
             <span>FIC Reporting — Suspicious Transaction Reports</span>
-            <button class="btn btn-danger btn-sm" onclick="openFICReport()">
+            <button class="btn btn-danger btn-sm" onclick="document.getElementById('ficReportForm')?.scrollIntoView({behavior:'smooth'})">
               <svg width="11" height="11" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10 4v12M4 10h12" stroke-linecap="round"/></svg>
               File STR
             </button>
           </div>
           <div style="background:var(--red-bg);border:1px solid var(--red-bd);border-radius:var(--r2);padding:10px 14px;font-size:12.5px;color:var(--red);margin-bottom:12px">
-            <strong>FIC Act Section 29 obligation:</strong> BipraPay must report suspicious and unusual transactions to the Financial Intelligence Centre without delay.
+            <strong>FIC Act Section 29 obligation:</strong> BipraPay must report suspicious and unusual transactions to the Financial Intelligence Centre without delay. Reports below are BipraPay's internal filing register — "Submitted" means ready-for-filing in this register, not confirmation of transmission to the FIC's own goAML system.
           </div>
           <div class="tbl-wrap"><table>
-            <thead><tr><th>Report ID</th><th>Type</th><th>Subject</th><th>Amount</th><th>Reason</th><th>Date</th><th>Status</th><th>FIC Ref</th></tr></thead>
-            <tbody>${FIC_REPORTS.map(r=>`<tr>
-              <td class="mono" style="color:var(--brand);font-size:11px">${r.id}</td>
-              <td><span style="font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:4px;background:${r.type==='STR'?'var(--red-bg)':'var(--amb-bg)'};color:${r.type==='STR'?'var(--red)':'var(--amb)'}">${r.type}</span></td>
-              <td style="font-weight:600;font-size:12.5px">${r.subject}</td>
-              <td class="mono" style="color:var(--red)">${r.amount}</td>
-              <td style="font-size:12px;color:var(--ink4)">${r.reason}</td>
-              <td style="font-size:11.5px;color:var(--ink4)">${r.date}</td>
-              <td><span class="badge b-${r.status==='submitted'?'active':'processing'}">${r.status}</span></td>
-              <td class="mono" style="font-size:11px;color:var(--ink4)">${r.ficRef}</td>
-            </tr>`).join('')}</tbody>
+            <thead><tr><th>Report ID</th><th>Type</th><th>Txn Ref</th><th>Amount</th><th>Reason</th><th>Date</th><th>Status</th><th></th></tr></thead>
+            <tbody id="ficReportsBody"><tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:16px">Loading…</td></tr></tbody>
           </table></div>
         </div>
-        <div class="card">
+        <div class="card" id="ficReportForm">
           <div class="card-hdr">File STR / CTR</div>
           <div class="form-row">
             <div class="form-group"><label class="form-label">Report Type</label>
-              <select class="form-input">
-                <option>STR — Suspicious Transaction Report</option>
-                <option>CTR — Cash Threshold Report (&gt;R 100K)</option>
-                <option>TPIR — Terrorist Property</option>
+              <select class="form-input" id="ficType">
+                <option value="str">STR — Suspicious Transaction Report</option>
+                <option value="ctr">CTR — Cash Threshold Report (&gt;R 100K)</option>
               </select>
             </div>
             <div class="form-group"><label class="form-label">Transaction Reference</label>
-              <input class="form-input mono" placeholder="SPY-CNP-XXXX">
+              <input class="form-input mono" id="ficTxnRef" placeholder="SPY-CNP-XXXX">
             </div>
           </div>
-          <div class="form-group"><label class="form-label">Subject Name / Entity</label><input class="form-input" placeholder="Full legal name"></div>
+          <div class="form-group"><label class="form-label">Subject Name / Entity</label><input class="form-input" id="ficSubject" placeholder="Full legal name"></div>
+          <div class="form-group"><label class="form-label">Amount (ZAR)</label><input class="form-input mono" id="ficAmount" placeholder="85000.00"></div>
           <div class="form-group"><label class="form-label">Grounds for Suspicion</label>
-            <textarea class="form-input" style="height:80px" placeholder="Describe the suspicious activity, pattern, or behaviour that triggered this report…"></textarea>
+            <textarea class="form-input" id="ficReason" style="height:80px" placeholder="Describe the suspicious activity, pattern, or behaviour that triggered this report…"></textarea>
           </div>
           <div style="display:flex;gap:6px;margin-top:4px">
-            <button class="btn btn-danger btn-sm" style="flex:1" onclick="submitFICReport()">Submit to FIC goAML</button>
-            <button class="btn btn-ghost btn-sm" onclick="toast('Report saved as draft','info')">Save Draft</button>
+            <button class="btn btn-danger btn-sm" style="flex:1" onclick="submitFICReportAction(true)">Submit to FIC Register</button>
+            <button class="btn btn-ghost btn-sm" onclick="submitFICReportAction(false)">Save Draft</button>
           </div>
         </div>
       </div>
@@ -21036,24 +21022,78 @@ function buildFICContent(el){
         </div>
         <div class="card">
           <div class="card-hdr">FIC goAML Integration</div>
+          <div style="padding:10px;background:var(--amb-bg);border:1px solid var(--amb-bd);border-radius:var(--r2);font-size:12px;color:var(--amb);margin-bottom:10px"><strong>Not connected.</strong> This register tracks filings internally; submitting to the FIC's own goAML portal is a separate regulatory integration requiring FIC-issued API credentials.</div>
           ${[
             {l:'goAML Portal',v:'goaml.fic.gov.za'},
             {l:'Institution Code',v:'FIC-SP-2024-00842'},
             {l:'Compliance Officer',v:'Sipho Dlamini'},
-            {l:'Last submission',v:'2026-05-04 — STR-2026-0042'},
-            {l:'Connection status',v:'Active (API)'},
           ].map(r=>`<div style="display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:12.5px">
             <span style="color:var(--ink4)">${r.l}</span><strong>${r.v}</strong>
           </div>`).join('')}
-          <button class="btn btn-ghost btn-sm" style="margin-top:10px" onclick="toast('goAML connection verified — Active','success')">Test goAML Connection</button>
         </div>
       </div>
     </div>`;
+  await refreshFicReports();
 }
 
-function submitFICReport(){
-  const ref = 'STR-2026-00'+Math.floor(43+Math.random()*10);
-  toast(`${ref} filed to FIC goAML · FIC-STR-2026-${Math.floor(18500+Math.random()*500)}`,'success',5000);
+async function refreshFicReports(){
+  const body = document.getElementById('ficReportsBody');
+  if(!body) return;
+  let rows = [];
+  try{
+    const db = await _waitForSpDb();
+    rows = await db.fetchFicReports();
+  }catch(e){ console.error('[BipraPay] Failed to load FIC reports',e); }
+
+  body.innerHTML = rows.length===0
+    ? `<tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:16px">No FIC reports filed yet.</td></tr>`
+    : rows.map(r=>`<tr>
+        <td class="mono" style="color:var(--brand);font-size:11px">${r.id}</td>
+        <td><span style="font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:4px;background:${r.report_type==='str'?'var(--red-bg)':'var(--amb-bg)'};color:${r.report_type==='str'?'var(--red)':'var(--amb)'}">${r.report_type.toUpperCase()}</span></td>
+        <td class="mono" style="font-size:11px">${r.transaction_ref||'—'}</td>
+        <td class="mono" style="color:var(--red)">${r.amount_cents!=null?'R '+(r.amount_cents/100).toLocaleString('en-ZA',{minimumFractionDigits:2}):'—'}</td>
+        <td style="font-size:12px;color:var(--ink4)">${r.reason}</td>
+        <td style="font-size:11.5px;color:var(--ink4)">${new Date(r.created_at).toISOString().slice(0,10)}</td>
+        <td><span class="badge b-${r.status==='submitted'||r.status==='acknowledged'?'active':'processing'}">${r.status}</span></td>
+        <td>${r.status==='draft'?`<button class="btn btn-ghost btn-xs" onclick="submitDraftFicReport('${r.id}')">Submit</button>`:''}</td>
+      </tr>`).join('');
+}
+
+async function submitFICReportAction(submitNow){
+  const reportType = document.getElementById('ficType')?.value||'str';
+  const txnRef = document.getElementById('ficTxnRef')?.value?.trim()||null;
+  const subject = document.getElementById('ficSubject')?.value?.trim();
+  const amountRand = parseFloat(document.getElementById('ficAmount')?.value||'');
+  const groundsText = document.getElementById('ficReason')?.value?.trim();
+  if(!subject || !groundsText){ toast('Enter the subject and grounds for suspicion','warn'); return; }
+  const reason = `Subject: ${subject}. ${groundsText}`;
+  const amountCents = Number.isFinite(amountRand) ? Math.round(amountRand*100) : null;
+
+  try{
+    const db = await _waitForSpDb();
+    const created = await db.createFicReport(reportType, txnRef, reason, amountCents);
+    if(created?.error){ toast(created.error,'warn',4000); return; }
+    if(submitNow){
+      const submitted = await db.submitFicReport(created.id);
+      if(submitted?.error){ toast(submitted.error,'warn',4000); return; }
+      toast(`${created.id} filed to the FIC register`,'success',5000);
+    } else {
+      toast(`${created.id} saved as draft`,'info',4000);
+    }
+    ['ficTxnRef','ficSubject','ficAmount','ficReason'].forEach(id=>{ const f=document.getElementById(id); if(f) f.value=''; });
+    await refreshFicReports();
+  }catch(e){ toast('FIC report failed: '+(e?.message||e),'warn',4000); }
+}
+
+async function submitDraftFicReport(reportId){
+  if(!confirm(`Submit ${reportId} to the FIC register?`)) return;
+  try{
+    const db = await _waitForSpDb();
+    const res = await db.submitFicReport(reportId);
+    if(res?.error){ toast(res.error,'warn',4000); return; }
+    toast(`${reportId} filed to the FIC register`,'success',4000);
+    await refreshFicReports();
+  }catch(e){ toast('Submission failed: '+(e?.message||e),'warn',4000); }
 }
 
 function buildSARBContent(el){
