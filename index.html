@@ -3693,23 +3693,12 @@ html.dark .hdr-ai-btn {
     <div class="hdr-logo">
       <div class="logo-mark"><svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"> <circle cx="20" cy="20" r="20" fill="#F05A00"/> <g transform="translate(20,20)">  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(0)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(51.4)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(102.9)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(154.3)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(205.7)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(257.1)"/>  <path d="M0,-8 C2.5,-8 4.5,-5.5 4.5,-3 C4.5,-0.5 2.5,1.5 0,1.5 C-2.5,1.5 -4.5,-0.5 -4.5,-3 C-4.5,-5.5 -2.5,-8 0,-8 Z" fill="none" stroke="white" stroke-width="1.2" transform="rotate(308.6)"/> </g></svg></div>
       <div class="logo-name">Bipra<span>Pay</span></div>
-      <span class="logo-badge">SANDBOX</span>
     </div>
     <div class="hdr-search">
       <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8.5" cy="8.5" r="5"/><path d="M15 15l-3.5-3.5" stroke-linecap="round"/></svg>
       <input type="text" placeholder="Search transactions, references, merchants…">
     </div>
     <div class="hdr-right">
-      <div class="hdr-chips">
-        <span class="hdr-chip chip-live">
-          <svg width="6" height="6" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>
-          All Systems Live
-        </span>
-        <span class="hdr-chip chip-pci">
-          <svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2L3 5v5c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V5L10 2z"/></svg>
-          PCI DSS L1
-        </span>
-      </div>
       <button class="dark-toggle" onclick="toggleDark()" title="Toggle dark mode" aria-label="Toggle dark mode" id="darkBtn">
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 12.5A7 7 0 119 3a5.5 5.5 0 008 9.5z" stroke-linecap="round"/></svg>
       </button>
@@ -5647,6 +5636,10 @@ html.dark .hdr-ai-btn {
         <button class="settings-nav-btn" id="snav-api" onclick="settingsTab('api')">
           <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7l-4 3 4 3M13 7l4 3-4 3M11 5l-2 10" stroke-linecap="round" stroke-linejoin="round"/></svg>
           <div><div style="font-size:13px;font-weight:600">API Access</div><div style="font-size:11px;opacity:.7">Keys · webhooks · IPs</div></div>
+        </button>
+        <button class="settings-nav-btn" id="snav-platform" onclick="settingsTab('platform')">
+          <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <div><div style="font-size:13px;font-weight:600">Platform</div><div style="font-size:11px;opacity:.7">Status · compliance · environment</div></div>
         </button>
         <div style="margin-top:8px;padding:10px 8px;background:var(--brand3);border:1px solid var(--brand-border);border-radius:var(--r2)">
           <div style="font-size:11px;font-weight:700;color:var(--brand);margin-bottom:4px">BipraPay v13.1</div>
@@ -17632,7 +17625,45 @@ window.settingsTab = function(t){
   else if(t==='security') renderSettingsSecurity(el);
   else if(t==='prefs') renderSettingsPrefs(el);
   else if(t==='api') renderSettingsApi(el);
+  else if(t==='platform') renderSettingsPlatform(el);
 };
+
+function renderSettingsPlatform(el){
+  el.innerHTML = `
+    <div class="g2 gap14">
+      <div class="card">
+        <div class="card-hdr">System Status</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--gr);flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">All Systems Live</div>
+            <div style="font-size:11.5px;color:var(--ink4)">Payments, dashboard, and API are operating normally</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 0">
+          <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="var(--brand)" stroke-width="1.8" style="flex-shrink:0"><path d="M10 2L3 5v5c0 5 3.5 8.5 7 10 3.5-1.5 7-5 7-10V5L10 2z"/></svg>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--ink)">PCI DSS L1</div>
+            <div style="font-size:11.5px;color:var(--ink4)">Highest tier of PCI DSS compliance for payment card processing</div>
+          </div>
+        </div>
+        <div style="margin-top:6px;font-size:11px;color:var(--ink5)">See <a href="#" onclick="nav('cloudwatch');setTimeout(()=>cwTab('live'),100);return false" style="color:var(--brand)">Live Errors</a> for real-time application health.</div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">Environment</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border)">
+          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--amb-bg);color:var(--amb);border:1px solid var(--amb-bd)">SANDBOX</span>
+          <div style="flex:1;font-size:11.5px;color:var(--ink4)">This console is running in a sandbox environment. No real money moves — payments and settlements use test data.</div>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:12.5px">
+          <span style="color:var(--ink4)">Region</span><strong>af-south-1 (Cape Town)</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--border);font-size:12.5px">
+          <span style="color:var(--ink4)">Version</span><strong>BipraPay v13.1</strong>
+        </div>
+      </div>
+    </div>`;
+}
 
 function renderSettingsProfile(el){
   el.innerHTML = `
