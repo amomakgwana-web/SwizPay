@@ -247,6 +247,21 @@ async function revokeApiKey(keyId) {
   return data;
 }
 
+// ── Reconciliation ──────────────────────────────────────────────
+// Raw rows for the reconciliation report: every transaction's type,
+// amount, status, and whether it has been swept into a settlement batch.
+// Aggregation happens client-side (the dataset is small).
+
+async function fetchReconciliationRows(limit = 2000) {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('type, amount_cents, status, settlement_id, created_at')
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return data;
+}
+
 // ── Staff user management ───────────────────────────────────────
 
 async function fetchStaff() {
@@ -576,6 +591,7 @@ window.SP_DB = {
   createFicReport,
   submitFicReport,
   fetchClientErrors,
+  fetchReconciliationRows,
   fetchStaff,
   fetchRoles,
   inviteUser,
