@@ -5372,8 +5372,8 @@ html.dark .hdr-ai-btn {
   <div class="page-hdr">
     <div><div class="ph-title">Reconciliation Reports</div><div class="ph-sub">Daily · Weekly · Monthly · Channel breakdown</div></div>
     <div class="ph-actions">
-      <button class="btn btn-ghost btn-sm">Export CSV</button>
-      <button class="btn btn-primary btn-sm">Run Now</button>
+      <button class="btn btn-ghost btn-sm" onclick="exportRecoCsv()">Export CSV</button>
+      <button class="btn btn-primary btn-sm" onclick="recoRptView(_recoCurrentView)">Refresh</button>
     </div>
   </div>
   <div class="pad">
@@ -9841,38 +9841,94 @@ function startRtMonitor(){
 // ══════════════════════════════════════
 // RECONCILIATION REPORT
 // ══════════════════════════════════════
-function recoRptView(v){
+// Reconciliation: "matched" = a successful transaction that has been swept
+// into a settlement batch; "unmatched" = successful but not yet settled.
+// Aggregated live from the transactions table per day/ISO-week/month.
+let _recoLastRows = [];
+let _recoCurrentView = 'daily';
+
+function _recoPeriodKey(dateStr, view){
+  const d = new Date(dateStr);
+  if(view==='daily') return d.toISOString().slice(0,10);
+  if(view==='monthly') return d.toISOString().slice(0,7);
+  // ISO week
+  const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(t.getUTCFullYear(),0,1));
+  const week = Math.ceil((((t - yearStart) / 86400000) + 1) / 7);
+  return `${t.getUTCFullYear()}-W${String(week).padStart(2,'0')}`;
+}
+
+function _recoAggregate(txns, view){
+  const buckets = new Map();
+  for(const t of txns){
+    const key = _recoPeriodKey(t.created_at, view);
+    if(!buckets.has(key)) buckets.set(key, {period:key, cp:0, cnp:0, push:0, pull:0, matched:0, unmatched:0});
+    const b = buckets.get(key);
+    const typeKey = {CP:'cp', CNP:'cnp', Push:'push', Pull:'pull', PayShap:'push', 'WA Pay':'push'}[t.type] || 'cnp';
+    b[typeKey] += t.amount_cents;
+    if(['success','approved'].includes(t.status)){
+      if(t.settlement_id) b.matched++; else b.unmatched++;
+    }
+  }
+  return Array.from(buckets.values()).sort((a,b)=>b.period.localeCompare(a.period));
+}
+
+async function recoRptView(v){
+  _recoCurrentView = v;
   document.querySelectorAll('#recoRptSegment .seg-btn').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('#recoRptSegment .seg-btn').forEach(b=>{if(b.getAttribute('onclick')?.includes("'"+v+"'"))b.classList.add('active');});
   const el = document.getElementById('recoRptContent');
   if(!el) return;
-  const rows = {
-    daily:[{date:'2026-05-05',cp:'R 218K',cnp:'R 412K',push:'R 143K',pull:'R 73K',matched:1271,unmatched:9,rate:'99.0%'}],
-    weekly:[
-      {date:'29 Apr – 5 May',cp:'R 1,092K',cnp:'R 2,064K',push:'R 714K',pull:'R 365K',matched:6352,unmatched:48,rate:'99.3%'},
-      {date:'22 – 28 Apr',cp:'R 1,048K',cnp:'R 1,984K',push:'R 686K',pull:'R 350K',matched:6104,unmatched:32,rate:'99.5%'},
-    ],
-    monthly:[
-      {date:'May 2026 (to date)',cp:'R 1,092K',cnp:'R 2,064K',push:'R 714K',pull:'R 365K',matched:6352,unmatched:48,rate:'99.3%'},
-      {date:'April 2026',cp:'R 4,193K',cnp:'R 7,937K',push:'R 2,745K',pull:'R 1,399K',matched:24416,unmatched:128,rate:'99.5%'},
-      {date:'March 2026',cp:'R 3,984K',cnp:'R 7,542K',push:'R 2,608K',pull:'R 1,328K',matched:23204,unmatched:96,rate:'99.6%'},
-    ],
-  };
+  el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Reconciling…</div>`;
+
+  let txns = [];
+  try{
+    const db = await _waitForSpDb();
+    txns = await db.fetchReconciliationRows();
+  }catch(e){
+    console.error('[BipraPay] Failed to load reconciliation data',e);
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load reconciliation data — check your connection and retry.</div>`;
+    return;
+  }
+
+  const rows = _recoAggregate(txns, v);
+  _recoLastRows = rows;
+  const fmtR = (c)=>'R '+(c/100).toLocaleString('en-ZA',{minimumFractionDigits:2});
+
   el.innerHTML = `<div class="tbl-wrap"><table>
-    <thead><tr><th>Period</th><th>CP</th><th>CNP</th><th>Push</th><th>Pull</th><th>Matched</th><th>Unmatched</th><th>Rate</th><th></th></tr></thead>
-    <tbody>${rows[v].map(r=>`<tr>
-      <td style="font-weight:600">${r.date}</td>
-      <td class="num">${r.cp}</td><td class="num">${r.cnp}</td>
-      <td class="num">${r.push}</td><td class="num">${r.pull}</td>
+    <thead><tr><th>Period</th><th>CP</th><th>CNP</th><th>Push</th><th>Pull</th><th>Matched</th><th>Unmatched</th><th>Rate</th></tr></thead>
+    <tbody>${rows.length===0 ? `<tr><td colspan="8" style="text-align:center;color:var(--ink4);padding:20px">No transactions yet.</td></tr>` : rows.map(r=>{
+      const eligible = r.matched + r.unmatched;
+      const rate = eligible ? (100*r.matched/eligible) : null;
+      return `<tr>
+      <td style="font-weight:600">${r.period}</td>
+      <td class="num">${fmtR(r.cp)}</td><td class="num">${fmtR(r.cnp)}</td>
+      <td class="num">${fmtR(r.push)}</td><td class="num">${fmtR(r.pull)}</td>
       <td class="mono">${r.matched.toLocaleString()}</td>
-      <td class="mono" style="color:${parseInt(r.unmatched)>0?'var(--amb)':'var(--gr)'}">${r.unmatched}</td>
-      <td class="mono" style="color:var(--gr);font-weight:700">${r.rate}</td>
-      <td><div style="display:flex;gap:4px">
-        <button class="btn btn-ghost btn-xs">CSV</button>
-        <button class="btn btn-ghost btn-xs">PDF</button>
-      </div></td>
-    </tr>`).join('')}</tbody>
-  </table></div>`;
+      <td class="mono" style="color:${r.unmatched>0?'var(--amb)':'var(--gr)'}">${r.unmatched}</td>
+      <td class="mono" style="color:${rate===null?'var(--ink4)':rate>=99?'var(--gr)':'var(--amb)'};font-weight:700">${rate===null?'—':rate.toFixed(1)+'%'}</td>
+    </tr>`;}).join('')}</tbody>
+  </table></div>
+  <div style="margin-top:12px;font-size:12px;color:var(--ink4)">Matched = successful transactions swept into a settlement batch. Unmatched settle on the next "Run Settlement" from the Settlement Reports page.</div>`;
+}
+
+function exportRecoCsv(){
+  if(!_recoLastRows.length){ toast('Nothing to export yet','warn'); return; }
+  const header = 'period,cp_cents,cnp_cents,push_cents,pull_cents,matched,unmatched,match_rate_pct';
+  const lines = _recoLastRows.map(r=>{
+    const eligible = r.matched + r.unmatched;
+    const rate = eligible ? (100*r.matched/eligible).toFixed(1) : '';
+    return [r.period, r.cp, r.cnp, r.push, r.pull, r.matched, r.unmatched, rate].join(',');
+  });
+  const blob = new Blob([header+'\n'+lines.join('\n')], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `biprapay-reconciliation-${_recoCurrentView}-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Reconciliation CSV downloaded','success');
 }
 
 // ══════════════════════════════════════
@@ -25050,63 +25106,183 @@ function buildDevPortal(el){
 
   // ══ analyticsTab ══════════════════════════════════════════════
   // (no base fn — all content is in overrides)
+  // Real analytics: everything here is computed from the live transactions,
+  // disputes, and settlements tables. TPS/latency gauges were dropped — the
+  // client has no truthful source for infrastructure metrics.
+  async function _analyticsData(){
+    const db = await _waitForSpDb();
+    return db.fetchReconciliationRows();
+  }
+
+  async function renderAnalyticsRealtime(el){
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Computing from live data…</div>`;
+    let rows = [];
+    try{ rows = await _analyticsData(); }
+    catch(e){ el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load analytics — check your connection and retry.</div>`; return; }
+
+    const now = Date.now();
+    const in7d = rows.filter(r=>now - new Date(r.created_at).getTime() < 7*86400000);
+    const ok = rows.filter(r=>['success','approved'].includes(r.status));
+    const decided = rows.filter(r=>r.status!=='pending');
+    const vol7 = in7d.reduce((s,r)=>s+r.amount_cents,0);
+    const successRate = decided.length ? (100*ok.length/decided.length) : null;
+    const avgTicket = ok.length ? ok.reduce((s,r)=>s+r.amount_cents,0)/ok.length : 0;
+    const fmtR = (c)=>'R '+(c/100).toLocaleString('en-ZA',{maximumFractionDigits:0});
+
+    // Daily volume, last 14 days
+    const days = Array.from({length:14},(_,i)=>{
+      const d = new Date(now - (13-i)*86400000);
+      return d.toISOString().slice(0,10);
+    });
+    const byDay = Object.fromEntries(days.map(d=>[d,0]));
+    for(const r of rows){
+      const k = new Date(r.created_at).toISOString().slice(0,10);
+      if(k in byDay && ['success','approved'].includes(r.status)) byDay[k] += r.amount_cents/100;
+    }
+
+    // Channel breakdown by settled volume
+    const chans = {CP:0, CNP:0, Push:0, Pull:0};
+    for(const r of ok){ const k = {CP:'CP',CNP:'CNP',Push:'Push',Pull:'Pull',PayShap:'Push','WA Pay':'Push'}[r.type]||'CNP'; chans[k]+=r.amount_cents; }
+    const chanTotal = Object.values(chans).reduce((a,b)=>a+b,0) || 1;
+    const chanColors = {CP:'var(--cp)', CNP:'var(--cnp)', Push:'var(--brand)', Pull:'var(--pull)'};
+
+    el.innerHTML = `<div class="g4 gap14" style="margin-bottom:14px">
+      <div class="stat blue"><div class="stat-lbl">Volume (7d)</div><div class="stat-val" style="font-size:18px">${fmtR(vol7)}</div></div>
+      <div class="stat green"><div class="stat-lbl">Transactions (7d)</div><div class="stat-val">${in7d.length}</div></div>
+      <div class="stat green"><div class="stat-lbl">Success Rate</div><div class="stat-val">${successRate===null?'—':successRate.toFixed(1)+'%'}</div><div class="stat-meta">Of decided transactions</div></div>
+      <div class="stat amber"><div class="stat-lbl">Avg Ticket</div><div class="stat-val" style="font-size:18px">${fmtR(avgTicket)}</div></div>
+    </div>
+    <div class="g-main gap14">
+      <div class="card">
+        <div class="card-hdr">Successful Volume — Last 14 Days (R)</div>
+        <div id="rtChart" style="min-height:130px"></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">Channel Breakdown — Successful Volume</div>
+        ${Object.entries(chans).map(([ch,cents])=>{
+          const pct = Math.round(100*cents/chanTotal);
+          return `<div style="margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px">
+              <span style="font-weight:600">${ch}</span>
+              <span style="font-family:var(--mono)">${pct}% · ${fmtR(cents)}</span>
+            </div>
+            <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${pct}%;background:${chanColors[ch]}"></div></div>
+          </div>`;}).join('')}
+      </div>
+    </div>`;
+    setTimeout(()=>{
+      const rtEl = getEl('rtChart');
+      if(rtEl && typeof buildLineChart==='function'){
+        rtEl.innerHTML = buildLineChart(
+          [{label:'Volume', data:days.map(d=>byDay[d]), color:'var(--brand)'}],
+          days.map(d=>d.slice(5)), {w:480,h:130,showLegend:false,showDots:false,padB:24});
+      }
+    }, 40);
+  }
+
+  async function renderAnalyticsProcessing(el){
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Computing from live data…</div>`;
+    let rows = [];
+    try{ rows = await _analyticsData(); }
+    catch(e){ el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load analytics.</div>`; return; }
+    const decided = rows.filter(r=>r.status!=='pending');
+    const ok = decided.filter(r=>['success','approved'].includes(r.status));
+    const threeDs = rows.filter(r=>r.three_ds_status);
+    const frictionless = threeDs.filter(r=>r.three_ds_status==='frictionless');
+    const authRate = decided.length ? (100*ok.length/decided.length).toFixed(1)+'%' : '—';
+    const declineRate = decided.length ? (100*(decided.length-ok.length)/decided.length).toFixed(1)+'%' : '—';
+    const fRate = threeDs.length ? (100*frictionless.length/threeDs.length).toFixed(1)+'%' : '—';
+    el.innerHTML = `<div class="card"><div class="card-hdr">Processing Performance — Live</div>
+      <div class="g4 gap14">
+        ${[['Auth rate',authRate,'var(--gr)'],['Decided transactions',decided.length,'var(--brand)'],['3DS2 frictionless',fRate,'var(--gr)'],['Decline rate',declineRate,'var(--amb)']].map(([l,v,c])=>`
+          <div class="stat"><div class="stat-lbl">${l}</div><div class="stat-val" style="color:${c}">${v}</div></div>`).join('')}
+      </div>
+      <div style="margin-top:10px;font-size:11.5px;color:var(--ink4)">Computed from all recorded transactions. 3DS2 frictionless share covers tokenised payments with a recorded authentication outcome.</div>
+    </div>`;
+  }
+
+  async function renderAnalyticsChargebacks(el){
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Computing from live data…</div>`;
+    let disputes = [], rows = [];
+    try{
+      const db = await _waitForSpDb();
+      [disputes, rows] = await Promise.all([db.fetchDisputes(), db.fetchReconciliationRows()]);
+    }catch(e){ el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load dispute data.</div>`; return; }
+    const ok = rows.filter(r=>['success','approved'].includes(r.status));
+    const ratio = ok.length ? (100*disputes.length/ok.length) : null;
+    const openDisputes = disputes.filter(d=>d.stage!=='Resolved');
+    const disputedRand = disputes.reduce((s,d)=>s+d.amount,0);
+    const won = disputes.filter(d=>d.status==='won').length;
+    const resolved = disputes.filter(d=>['won','lost','withdrawn'].includes(d.status)).length;
+    el.innerHTML = `<div class="g4 gap14" style="margin-bottom:14px">
+      <div class="stat ${ratio!==null && ratio>1?'red':'green'}"><div class="stat-lbl">Chargeback Ratio</div><div class="stat-val">${ratio===null?'—':ratio.toFixed(2)+'%'}</div><div class="stat-meta">Disputes vs successful txns · scheme threshold 1%</div></div>
+      <div class="stat amber"><div class="stat-lbl">Open Disputes</div><div class="stat-val">${openDisputes.length}</div></div>
+      <div class="stat blue"><div class="stat-lbl">Disputed Amount</div><div class="stat-val" style="font-size:18px">R ${disputedRand.toLocaleString('en-ZA',{minimumFractionDigits:2})}</div></div>
+      <div class="stat green"><div class="stat-lbl">Win Rate</div><div class="stat-val">${resolved?Math.round(100*won/resolved)+'%':'—'}</div><div class="stat-meta">${won} of ${resolved} resolved</div></div>
+    </div>
+    <div class="card"><div class="card-hdr">All Disputes</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>ID</th><th>Txn</th><th>Reason</th><th>Scheme</th><th>Amount</th><th>Status</th><th>Stage</th></tr></thead>
+        <tbody>${disputes.length===0?`<tr><td colspan="7" style="text-align:center;color:var(--ink4);padding:16px">No disputes recorded.</td></tr>`:disputes.map(d=>`<tr>
+          <td class="mono" style="font-size:11px;color:var(--brand)">${d.id}</td>
+          <td class="mono" style="font-size:11px">${d.txn}</td>
+          <td style="font-size:12px">${d.reason}</td>
+          <td style="font-size:12px">${d.scheme||'—'}</td>
+          <td class="num">R ${d.amount.toLocaleString('en-ZA',{minimumFractionDigits:2})}</td>
+          <td><span class="badge b-${d.status==='won'?'success':d.status==='lost'?'failed':'pending'}">${d.status}</span></td>
+          <td style="font-size:12px;color:var(--ink4)">${d.stage}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  async function renderAnalyticsTax(el){
+    el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Computing from live data…</div>`;
+    let settlements = [];
+    try{
+      const db = await _waitForSpDb();
+      settlements = await db.fetchSettlements(200);
+    }catch(e){ el.innerHTML = `<div style="padding:24px;text-align:center;color:var(--ink4);font-size:13px">Couldn't load settlement data.</div>`; return; }
+    const fees = settlements.reduce((s,r)=>s+r.fee,0);
+    const vat = fees * 0.15;
+    const gross = settlements.reduce((s,r)=>s+r.gross,0);
+    const fmt = (r)=>'R '+r.toLocaleString('en-ZA',{minimumFractionDigits:2});
+    el.innerHTML = `<div class="g4 gap14" style="margin-bottom:14px">
+      <div class="stat blue"><div class="stat-lbl">Gross Settled Volume</div><div class="stat-val" style="font-size:18px">${fmt(gross)}</div></div>
+      <div class="stat green"><div class="stat-lbl">BipraPay Fees (excl VAT)</div><div class="stat-val" style="font-size:18px">${fmt(fees)}</div></div>
+      <div class="stat amber"><div class="stat-lbl">Output VAT on Fees (15%)</div><div class="stat-val" style="font-size:18px">${fmt(vat)}</div></div>
+      <div class="stat purple"><div class="stat-lbl">Settlement Batches</div><div class="stat-val">${settlements.length}</div></div>
+    </div>
+    <div class="card"><div class="card-hdr">VAT Basis by Settlement Batch</div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Batch</th><th>Merchant</th><th>Gross</th><th>Fee (VAT basis)</th><th>VAT @15%</th><th>Status</th></tr></thead>
+        <tbody>${settlements.length===0?`<tr><td colspan="6" style="text-align:center;color:var(--ink4);padding:16px">No settlement batches yet — VAT is computed on BipraPay's settlement fees.</td></tr>`:settlements.map(s=>`<tr>
+          <td class="mono" style="font-size:11px;font-weight:600">${s.id}</td>
+          <td>${s.merchantName}</td>
+          <td class="num">${fmt(s.gross)}</td>
+          <td class="num">${fmt(s.fee)}</td>
+          <td class="num" style="color:var(--amb)">${fmt(s.fee*0.15)}</td>
+          <td><span class="badge b-${s.status==='paid'?'success':'pending'}">${s.status}</span></td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+      <div style="margin-top:10px;font-size:11.5px;color:var(--ink4)">VAT figures are computed on BipraPay's own service fees (the VAT-able supply). Merchant transaction VAT is the merchant's declaration, not BipraPay's. Manual VAT201 filing until SARS eFiling is connected.</div>
+    </div>`;
+  }
+
   window.analyticsTab = function(t){
     setActiveTab('analyticsTabRow', t);
     const el = getEl('analyticsContent');
+    if(!el) return;
     switch(t){
-      case 'realtime': {
-        // render the realtime stats (inline, from original implementation)
-        if(!el) break;
-        el.innerHTML = `<div class="g4 gap14" style="margin-bottom:14px">
-          <div class="stat green"><div class="stat-lbl">TPS (now)</div><div class="stat-val" id="rtTps">12</div></div>
-          <div class="stat blue"><div class="stat-lbl">Avg Latency</div><div class="stat-val" id="rtLat">142ms</div></div>
-          <div class="stat green"><div class="stat-lbl">Success Rate</div><div class="stat-val">99.1%</div></div>
-          <div class="stat amber"><div class="stat-lbl">Queue Depth</div><div class="stat-val" id="rtQueue">8</div></div>
-        </div>
-        <div class="g-main gap14">
-          <div class="card">
-            <div class="card-hdr">Transactions per Second — Live</div>
-            <div id="rtChart" style="min-height:130px"></div>
-            <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink5);margin-top:6px"><span>-20 min</span><span>Now</span></div>
-          </div>
-          <div class="card">
-            <div class="card-hdr">Channel Breakdown — Live</div>
-            ${[{ch:'CP',pct:38,vol:'R 218K',color:'var(--cp)'},{ch:'CNP',pct:42,vol:'R 412K',color:'var(--cnp)'},{ch:'PayShap',pct:12,vol:'R 143K',color:'var(--brand)'},{ch:'Pull',pct:8,vol:'R 73K',color:'var(--pull)'}].map(ch=>`
-              <div style="margin-bottom:14px">
-                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:6px">
-                  <span style="font-weight:600">${ch.ch}</span>
-                  <span style="font-family:var(--mono)">${ch.pct}% · ${ch.vol}</span>
-                </div>
-                <div class="progress-bar-wrap"><div class="progress-bar-fill" style="width:${ch.pct}%;background:${ch.color}"></div></div>
-              </div>`).join('')}
-          </div>
-        </div>`;
-        // Wire live chart
-        setTimeout(()=>{
-          const rtEl = getEl('rtChart');
-          if(rtEl && typeof buildLineChart==='function'){
-            const data = Array.from({length:20},()=>Math.round(8+Math.random()*20));
-            rtEl.innerHTML = buildLineChart([{label:'TPS',data,color:'var(--brand)'}],
-              Array.from({length:20},(_,i)=>'-'+(20-i)+'m'),{w:480,h:130,showLegend:false,showDots:false,padB:24});
-            clearInterval(window._rtInterval);
-            window._rtInterval = setInterval(()=>{
-              const e=getEl('rtChart'); if(!e){clearInterval(window._rtInterval);return;}
-              data.push(Math.round(8+Math.random()*22)); data.shift();
-              e.innerHTML=buildLineChart([{label:'TPS',data,color:'var(--brand)'}],
-                Array.from({length:20},(_,i)=>'-'+(20-i)+'m'),{w:480,h:130,showLegend:false,showDots:false,padB:24});
-              // tick live stats
-              const tpsEl=getEl('rtTps'); if(tpsEl) tpsEl.textContent=Math.round(8+Math.random()*20);
-              const latEl=getEl('rtLat'); if(latEl) latEl.textContent=Math.round(120+Math.random()*80)+'ms';
-            }, 2500);
-          }
-        }, 80);
-        break;
-      }
-      case 'revenue':   if(el && typeof buildRevenueTab==='function')   buildRevenueTab(el);   break;
-      case 'geography': if(el && typeof buildGeographyTab==='function') buildGeographyTab(el); break;
-      case 'cohort':    if(el && typeof buildCohortTab==='function')    buildCohortTab(el);    break;
-      case 'interchange': if(el) el.innerHTML = buildInterchangeContent(); break;
-      case 'processing': if(el) el.innerHTML = buildProcessingContent(); break;
+      case 'realtime':    renderAnalyticsRealtime(el);   break;
+      case 'chargebacks': renderAnalyticsChargebacks(el);break;
+      case 'tax':         renderAnalyticsTax(el);        break;
+      case 'processing':  renderAnalyticsProcessing(el); break;
+      case 'revenue':   if(typeof buildRevenueTab==='function')   buildRevenueTab(el);   break;
+      case 'geography': if(typeof buildGeographyTab==='function') buildGeographyTab(el); break;
+      case 'cohort':    if(typeof buildCohortTab==='function')    buildCohortTab(el);    break;
+      case 'interchange': el.innerHTML = buildInterchangeContent(); break;
+      case 'builder': el.innerHTML = `<div class="card"><div class="card-hdr">Custom Report Builder</div><div style="padding:12px;font-size:12.5px;color:var(--ink4)">Use Reconciliation Reports (CSV export) for period aggregates, or ask for a custom report — this builder UI is not yet wired to live data.</div></div>`; break;
       default: toast('Analytics: unknown tab "'+t+'"','warn'); break;
     }
   };
