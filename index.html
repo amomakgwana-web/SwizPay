@@ -2014,8 +2014,11 @@ div.gap14:not([class*="g"]) { margin-bottom: 14px; }
 .g-main.stretch .card + .card,
 .g2.stretch .card + .card { height: auto; }
 
-/* Stat cards don't need to be 100% tall */
+/* Stat cards don't need to be 100% tall, except when their row is explicitly stretched */
 .stat { height: auto !important; }
+.g4.stretch > .stat, .g3.stretch > .stat, .g2.stretch > .stat {
+  height: 100% !important; display: flex; flex-direction: column;
+}
 
 /* Message bus card */
 #dashMsgBus { min-height: 60px; }
@@ -4143,7 +4146,7 @@ html.dark .hdr-ai-btn {
   </div>
   <div class="pad">
   <div style="font-family:var(--mono);font-size:11px;color:var(--ink4);text-align:right;margin-bottom:-4px" id="dashClock"></div>
-  <div class="g4 gap14">
+  <div class="g4 gap14 stretch">
     <div class="stat green"><div class="stat-lbl">Total Volume Today</div><div class="stat-val">R 847,320</div><div class="stat-meta"><span class="d-up">+12.4%</span> vs yesterday · 1,284 transactions</div></div>
     <div class="stat blue"><div class="stat-lbl">Success Rate</div><div class="stat-val">98.3%</div><div class="stat-meta">12 failed · <span class="d-up">+0.4%</span> improvement</div></div>
     <div class="stat amber"><div class="stat-lbl">Pending Settlement</div><div class="stat-val">R 142,800</div><div class="stat-meta">Tomorrow 06:00 SAST · FNB ••4821</div></div>
@@ -13668,8 +13671,8 @@ function enhanceDashboardStats(){
     const meta = statEl.querySelector('.stat-meta');
     if(meta && !statEl.querySelector('svg')){
       const wrap = document.createElement('div');
-      wrap.style.cssText = 'margin:6px 0 2px;opacity:.7';
-      wrap.innerHTML = buildSparklineSVG(data, {w:140,h:28,color,fill:true,dotLast:true});
+      wrap.style.cssText = 'margin:4px 0 0;opacity:.7';
+      wrap.innerHTML = buildSparklineSVG(data, {w:140,h:16,color,fill:true,dotLast:true});
       statEl.insertBefore(wrap, meta);
     }
   };
